@@ -4,8 +4,7 @@ const path = require("path");
 
 const OUTPUT_DIR = "./data";
 const VIEWPORT = { width: 1280, height: 800 };
-const MAX_PAGES = 300; // limite de páginas visitadas
-const visitedUrls = new Set();
+const MAX_PAGES = 300;
 const urlQueue = [];
 
 const TARGET_URLS = [
@@ -102,83 +101,215 @@ const TARGET_URLS = [
   // "https://pt.wikipedia.org/wiki/Aprendizado_de_máquina",
   // "https://pt.wikipedia.org/wiki/Redes_neurais_artificiais",
   // "https://pt.wikipedia.org/wiki/Algoritmo",
-  // "https://pt.wikipedia.org/wiki/Estrutura_de_dados"
+  // "https://pt.wikipedia.org/wiki/Estrutura_de_dados",
 
-  "https://pt.wikipedia.org/wiki/História_da_ciência",
-  "https://pt.wikipedia.org/wiki/História_da_filosofia",
-  "https://pt.wikipedia.org/wiki/História_da_matemática",
-  "https://pt.wikipedia.org/wiki/História_da_arte",
-  "https://pt.wikipedia.org/wiki/História_da_literatura",
+  // "https://pt.wikipedia.org/wiki/História_da_ciência",
+  // "https://pt.wikipedia.org/wiki/História_da_filosofia",
+  // "https://pt.wikipedia.org/wiki/História_da_matemática",
+  // "https://pt.wikipedia.org/wiki/História_da_arte",
+  // "https://pt.wikipedia.org/wiki/História_da_literatura",
 
-  "https://pt.wikipedia.org/wiki/Sociologia",
-  "https://pt.wikipedia.org/wiki/Antropologia",
-  "https://pt.wikipedia.org/wiki/Economia",
-  "https://pt.wikipedia.org/wiki/Política",
-  "https://pt.wikipedia.org/wiki/Democracia",
+  // "https://pt.wikipedia.org/wiki/Sociologia",
+  // "https://pt.wikipedia.org/wiki/Antropologia",
+  // "https://pt.wikipedia.org/wiki/Economia",
+  // "https://pt.wikipedia.org/wiki/Política",
+  // "https://pt.wikipedia.org/wiki/Democracia",
 
-  "https://pt.wikipedia.org/wiki/Direito",
-  "https://pt.wikipedia.org/wiki/Constituição",
-  "https://pt.wikipedia.org/wiki/Cidadania",
-  "https://pt.wikipedia.org/wiki/Estado",
-  "https://pt.wikipedia.org/wiki/Nação",
+  // "https://pt.wikipedia.org/wiki/Direito",
+  // "https://pt.wikipedia.org/wiki/Constituição",
+  // "https://pt.wikipedia.org/wiki/Cidadania",
+  // "https://pt.wikipedia.org/wiki/Estado",
+  // "https://pt.wikipedia.org/wiki/Nação",
 
-  "https://pt.wikipedia.org/wiki/Astronomia",
-  "https://pt.wikipedia.org/wiki/Cosmologia",
-  "https://pt.wikipedia.org/wiki/Sistema_solar",
-  "https://pt.wikipedia.org/wiki/Estrela",
-  "https://pt.wikipedia.org/wiki/Galáxia",
+  // "https://pt.wikipedia.org/wiki/Astronomia",
+  // "https://pt.wikipedia.org/wiki/Cosmologia",
+  // "https://pt.wikipedia.org/wiki/Sistema_solar",
+  // "https://pt.wikipedia.org/wiki/Estrela",
+  // "https://pt.wikipedia.org/wiki/Galáxia",
 
-  "https://pt.wikipedia.org/wiki/Geografia",
-  "https://pt.wikipedia.org/wiki/Clima",
-  "https://pt.wikipedia.org/wiki/Ecossistema",
-  "https://pt.wikipedia.org/wiki/Biodiversidade",
-  "https://pt.wikipedia.org/wiki/Meio_ambiente",
+  // "https://pt.wikipedia.org/wiki/Geografia",
+  // "https://pt.wikipedia.org/wiki/Clima",
+  // "https://pt.wikipedia.org/wiki/Ecossistema",
+  // "https://pt.wikipedia.org/wiki/Biodiversidade",
+  // "https://pt.wikipedia.org/wiki/Meio_ambiente",
 
-  "https://pt.wikipedia.org/wiki/Educação",
-  "https://pt.wikipedia.org/wiki/Pedagogia",
-  "https://pt.wikipedia.org/wiki/Ensino_superior",
-  "https://pt.wikipedia.org/wiki/Ciência",
-  "https://pt.wikipedia.org/wiki/Tecnologia",
+  // "https://pt.wikipedia.org/wiki/Educação",
+  // "https://pt.wikipedia.org/wiki/Pedagogia",
+  // "https://pt.wikipedia.org/wiki/Ensino_superior",
+  // "https://pt.wikipedia.org/wiki/Ciência",
+  // "https://pt.wikipedia.org/wiki/Tecnologia",
 
-  "https://pt.wikipedia.org/wiki/Engenharia",
-  "https://pt.wikipedia.org/wiki/Engenharia_de_software",
-  "https://pt.wikipedia.org/wiki/Programação",
-  "https://pt.wikipedia.org/wiki/Linguagem_de_programação",
-  "https://pt.wikipedia.org/wiki/Computador",
+  // "https://pt.wikipedia.org/wiki/Engenharia",
+  // "https://pt.wikipedia.org/wiki/Engenharia_de_software",
+  // "https://pt.wikipedia.org/wiki/Programação",
+  // "https://pt.wikipedia.org/wiki/Linguagem_de_programação",
+  // "https://pt.wikipedia.org/wiki/Computador",
 
-  "https://pt.wikipedia.org/wiki/Internet",
-  "https://pt.wikipedia.org/wiki/World_Wide_Web",
-  "https://pt.wikipedia.org/wiki/Segurança_da_informação",
-  "https://pt.wikipedia.org/wiki/Criptografia",
-  "https://pt.wikipedia.org/wiki/Banco_de_dados",
+  // "https://pt.wikipedia.org/wiki/Internet",
+  // "https://pt.wikipedia.org/wiki/World_Wide_Web",
+  // "https://pt.wikipedia.org/wiki/Segurança_da_informação",
+  // "https://pt.wikipedia.org/wiki/Criptografia",
+  // "https://pt.wikipedia.org/wiki/Banco_de_dados",
 
-  "https://pt.wikipedia.org/wiki/Medicina",
-  "https://pt.wikipedia.org/wiki/Saúde",
-  "https://pt.wikipedia.org/wiki/Anatomia",
-  "https://pt.wikipedia.org/wiki/Fisiologia",
-  "https://pt.wikipedia.org/wiki/Doença",
+  // "https://pt.wikipedia.org/wiki/Medicina",
+  // "https://pt.wikipedia.org/wiki/Saúde",
+  // "https://pt.wikipedia.org/wiki/Anatomia",
+  // "https://pt.wikipedia.org/wiki/Fisiologia",
+  // "https://pt.wikipedia.org/wiki/Doença",
 
-  "https://pt.wikipedia.org/wiki/Psicologia",
-  "https://pt.wikipedia.org/wiki/Neurociência",
-  "https://pt.wikipedia.org/wiki/Cognição",
-  "https://pt.wikipedia.org/wiki/Comportamento",
-  "https://pt.wikipedia.org/wiki/Aprendizagem",
+  // "https://pt.wikipedia.org/wiki/Psicologia",
+  // "https://pt.wikipedia.org/wiki/Neurociência",
+  // "https://pt.wikipedia.org/wiki/Cognição",
+  // "https://pt.wikipedia.org/wiki/Comportamento",
+  // "https://pt.wikipedia.org/wiki/Aprendizagem",
 
-  "https://pt.wikipedia.org/wiki/História_militar",
-  "https://pt.wikipedia.org/wiki/Guerra",
-  "https://pt.wikipedia.org/wiki/Exército",
-  "https://pt.wikipedia.org/wiki/Estratégia_militar",
-  "https://pt.wikipedia.org/wiki/Tática",
+  // "https://pt.wikipedia.org/wiki/História_militar",
+  // "https://pt.wikipedia.org/wiki/Guerra",
+  // "https://pt.wikipedia.org/wiki/Exército",
+  // "https://pt.wikipedia.org/wiki/Estratégia_militar",
+  // "https://pt.wikipedia.org/wiki/Tática",
 
-  "https://pt.wikipedia.org/wiki/Religião",
-  "https://pt.wikipedia.org/wiki/Filosofia_da_religião",
-  "https://pt.wikipedia.org/wiki/Mitologia",
-  "https://pt.wikipedia.org/wiki/Mitologia_grega",
-  "https://pt.wikipedia.org/wiki/Mitologia_romana"
+  // "https://pt.wikipedia.org/wiki/Religião",
+  // "https://pt.wikipedia.org/wiki/Filosofia_da_religião",
+  // "https://pt.wikipedia.org/wiki/Mitologia",
+  // "https://pt.wikipedia.org/wiki/Mitologia_grega",
+  // "https://pt.wikipedia.org/wiki/Mitologia_romana"
+
+  // "https://pt.wikipedia.org/wiki/História_antiga",
+  // "https://pt.wikipedia.org/wiki/História_medieval",
+  // "https://pt.wikipedia.org/wiki/História_moderna",
+  // "https://pt.wikipedia.org/wiki/História_contemporânea",
+  // "https://pt.wikipedia.org/wiki/Império_Bizantino",
+  // "https://pt.wikipedia.org/wiki/Império_Otomano",
+  // "https://pt.wikipedia.org/wiki/Feudalismo",
+  // "https://pt.wikipedia.org/wiki/Colonialismo",
+  // "https://pt.wikipedia.org/wiki/Imperialismo",
+  // "https://pt.wikipedia.org/wiki/Descolonização",
+  // "https://pt.wikipedia.org/wiki/Guerra_Fria",
+  // "https://pt.wikipedia.org/wiki/Primeira_Guerra_Mundial",
+  // "https://pt.wikipedia.org/wiki/Segunda_Guerra_Mundial",
+  // "https://pt.wikipedia.org/wiki/Revolução_Russa",
+  // "https://pt.wikipedia.org/wiki/Golpe_de_Estado",
+  // "https://pt.wikipedia.org/wiki/Totalitarismo",
+  // "https://pt.wikipedia.org/wiki/Autoritarismo",
+  // "https://pt.wikipedia.org/wiki/Liberalismo",
+  // "https://pt.wikipedia.org/wiki/Socialismo",
+  // "https://pt.wikipedia.org/wiki/Comunismo",
+
+  // "https://pt.wikipedia.org/wiki/Brasil_Colônia",
+  // "https://pt.wikipedia.org/wiki/Brasil_Império",
+  // "https://pt.wikipedia.org/wiki/República_Velha",
+  // "https://pt.wikipedia.org/wiki/Estado_Novo_(Brasil)",
+  // "https://pt.wikipedia.org/wiki/Ditadura_militar_brasileira",
+  // "https://pt.wikipedia.org/wiki/Redemocratização_do_Brasil",
+  // "https://pt.wikipedia.org/wiki/Constituição_brasileira_de_1988",
+  // "https://pt.wikipedia.org/wiki/História_política_do_Brasil",
+  // "https://pt.wikipedia.org/wiki/Economia_do_Brasil",
+  // "https://pt.wikipedia.org/wiki/Geografia_do_Brasil",
+  // "https://pt.wikipedia.org/wiki/Biomas_do_Brasil",
+  // "https://pt.wikipedia.org/wiki/Amazônia",
+  // "https://pt.wikipedia.org/wiki/Cerrado",
+  // "https://pt.wikipedia.org/wiki/Caatinga",
+  // "https://pt.wikipedia.org/wiki/Mata_Atlântica",
+  // "https://pt.wikipedia.org/wiki/Cultura_do_Brasil",
+  // "https://pt.wikipedia.org/wiki/Folclore_brasileiro",
+  // "https://pt.wikipedia.org/wiki/Literatura_brasileira",
+  // "https://pt.wikipedia.org/wiki/Modernismo_no_Brasil",
+  // "https://pt.wikipedia.org/wiki/Arte_no_Brasil",
+
+  // "https://pt.wikipedia.org/wiki/Método_científico",
+  // "https://pt.wikipedia.org/wiki/História_da_tecnologia",
+  // "https://pt.wikipedia.org/wiki/Computação_teórica",
+  // "https://pt.wikipedia.org/wiki/Complexidade_computacional",
+  // "https://pt.wikipedia.org/wiki/Arquitetura_de_computadores",
+  // "https://pt.wikipedia.org/wiki/Sistemas_operacionais",
+  // "https://pt.wikipedia.org/wiki/Engenharia_elétrica",
+  // "https://pt.wikipedia.org/wiki/Engenharia_mecânica",
+  // "https://pt.wikipedia.org/wiki/Engenharia_civil",
+  // "https://pt.wikipedia.org/wiki/Robótica",
+  // "https://pt.wikipedia.org/wiki/Automação",
+  // "https://pt.wikipedia.org/wiki/Big_data",
+  // "https://pt.wikipedia.org/wiki/Ciência_de_dados",
+  // "https://pt.wikipedia.org/wiki/Visão_computacional",
+  // "https://pt.wikipedia.org/wiki/Processamento_de_linguagem_natural",
+  // "https://pt.wikipedia.org/wiki/Aprendizado_profundo",
+  // "https://pt.wikipedia.org/wiki/Modelo_de_linguagem",
+  // "https://pt.wikipedia.org/wiki/Algoritmos_genéticos",
+  // "https://pt.wikipedia.org/wiki/Redes_convolucionais",
+  // "https://pt.wikipedia.org/wiki/Transformador_(aprendizado_de_máquina)",
+
+  // "https://pt.wikipedia.org/wiki/Metafísica",
+  // "https://pt.wikipedia.org/wiki/Epistemologia",
+  // "https://pt.wikipedia.org/wiki/Ética",
+  // "https://pt.wikipedia.org/wiki/Estética",
+  // "https://pt.wikipedia.org/wiki/Existencialismo",
+  // "https://pt.wikipedia.org/wiki/Racionalismo",
+  // "https://pt.wikipedia.org/wiki/Empirismo",
+  // "https://pt.wikipedia.org/wiki/Positivismo",
+  // "https://pt.wikipedia.org/wiki/Niilismo",
+  // "https://pt.wikipedia.org/wiki/Materialismo",
+  // "https://pt.wikipedia.org/wiki/Idealismo",
+  // "https://pt.wikipedia.org/wiki/Fenomenologia",
+  // "https://pt.wikipedia.org/wiki/Hermenêutica",
+  // "https://pt.wikipedia.org/wiki/Pragmatismo",
+  // "https://pt.wikipedia.org/wiki/Estoicismo",
+  // "https://pt.wikipedia.org/wiki/Epicurismo",
+  // "https://pt.wikipedia.org/wiki/Platão",
+  // "https://pt.wikipedia.org/wiki/Aristóteles",
+  // "https://pt.wikipedia.org/wiki/Immanuel_Kant",
+  // "https://pt.wikipedia.org/wiki/Friedrich_Nietzsche",
+
+  // "https://pt.wikipedia.org/wiki/Geopolítica",
+  // "https://pt.wikipedia.org/wiki/Continente",
+  // "https://pt.wikipedia.org/wiki/Oceano",
+  // "https://pt.wikipedia.org/wiki/Placas_tectônicas",
+  // "https://pt.wikipedia.org/wiki/Terremoto",
+  // "https://pt.wikipedia.org/wiki/Vulcão",
+  // "https://pt.wikipedia.org/wiki/Deserto",
+  // "https://pt.wikipedia.org/wiki/Floresta",
+  // "https://pt.wikipedia.org/wiki/Montanha",
+  // "https://pt.wikipedia.org/wiki/Rio",
+  // "https://pt.wikipedia.org/wiki/Clima_tropical",
+  // "https://pt.wikipedia.org/wiki/Clima_temperado",
+  // "https://pt.wikipedia.org/wiki/Clima_polar",
+  // "https://pt.wikipedia.org/wiki/Urbanização",
+  // "https://pt.wikipedia.org/wiki/Megacidade",
+  // "https://pt.wikipedia.org/wiki/Demografia",
+  // "https://pt.wikipedia.org/wiki/Migração",
+  // "https://pt.wikipedia.org/wiki/Globalização",
+  // "https://pt.wikipedia.org/wiki/Desenvolvimento_humano",
+  // "https://pt.wikipedia.org/wiki/Índice_de_Desenvolvimento_Humano",
+
+  // "https://pt.wikipedia.org/wiki/Marie_Curie",
+  // "https://pt.wikipedia.org/wiki/Ada_Lovelace",
+  // "https://pt.wikipedia.org/wiki/Alan_Turing",
+  // "https://pt.wikipedia.org/wiki/Claude_Shannon",
+  // "https://pt.wikipedia.org/wiki/Max_Planck",
+  // "https://pt.wikipedia.org/wiki/Richard_Feynman",
+  // "https://pt.wikipedia.org/wiki/Carl_Sagan",
+  // "https://pt.wikipedia.org/wiki/Johannes_Kepler",
+  // "https://pt.wikipedia.org/wiki/Nicolau_Copérnico",
+  // "https://pt.wikipedia.org/wiki/Thomas_Kuhn",
+  // "https://pt.wikipedia.org/wiki/Karl_Popper",
+  // "https://pt.wikipedia.org/wiki/Hannah_Arendt",
+  // "https://pt.wikipedia.org/wiki/Simone_de_Beauvoir",
+  // "https://pt.wikipedia.org/wiki/Michel_Foucault",
+  // "https://pt.wikipedia.org/wiki/Jean-Jacques_Rousseau",
+  // "https://pt.wikipedia.org/wiki/Voltaire",
+  // "https://pt.wikipedia.org/wiki/John_Locke",
+  // "https://pt.wikipedia.org/wiki/David_Hume",
+  // "https://pt.wikipedia.org/wiki/Baruch_Spinoza",
+  // "https://pt.wikipedia.org/wiki/Georg_Wilhelm_Friedrich_Hegel",
 ];
 
 TARGET_URLS.forEach(url => urlQueue.push(url));
-let SAMPLE_ID = 33086;
+
+const visitedUrlsJsonData = fs.readFileSync('./visited_urls.json', 'utf8');
+const allVisitedUrls = JSON.parse(visitedUrlsJsonData);
+const visitedUrls = new Set(allVisitedUrls.visited || []);
+
+let SAMPLE_ID = 47155;
+let CURRENT_AMOUNT_OF_VISITED_URLS = 0
 
 function nextSampleId() {
   SAMPLE_ID += 1;
@@ -198,18 +329,37 @@ function isValidWikiLink(href) {
   return true;
 }
 
+function updateVisitedUrlsJson() {
+  const updated = {
+    visited: [...visitedUrls]
+  };
+
+  fs.writeFileSync(
+    'visited_urls.json',
+    JSON.stringify(updated, null, 2)
+  );
+}
+
 async function run() {
+  console.log("Starting.")
   ensureDir(OUTPUT_DIR);
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: VIEWPORT });
   const page = await context.newPage();
 
-  while (urlQueue.length > 0 && visitedUrls.size < MAX_PAGES) {
+  console.log(`Url Queue length: ${urlQueue.length}`);
+  console.log(`Visited URLS: ${visitedUrls.size}`);
+
+  while (urlQueue.length > 0 && CURRENT_AMOUNT_OF_VISITED_URLS < MAX_PAGES) {
     const url = urlQueue.shift();
-    if (visitedUrls.has(url)) continue;
+    if (visitedUrls.has(url)) {
+      console.log(`Url [${url}] already visited, skipping..`);
+      continue;
+    };
 
     visitedUrls.add(url);
+    updateVisitedUrlsJson();
     console.log(`Visiting (${visitedUrls.size}/${MAX_PAGES}): ${url}`);
 
     try {
@@ -261,6 +411,7 @@ async function run() {
         urlQueue.push(fullUrl);
       }
     }
+    CURRENT_AMOUNT_OF_VISITED_URLS += 1;
   }
 
   await browser.close();
