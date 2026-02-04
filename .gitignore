@@ -1,4 +1,5 @@
 collected-data/
+checkpoint/
 node_modules/
 venv/
 .venv/
