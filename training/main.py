@@ -20,7 +20,7 @@ def main():
     test_transforms = base_pipeline()
     val_transforms = base_pipeline()
 
-    dataset = OCRDataset("../data-collection/data", charset)
+    dataset = OCRDataset("../data-collection/collected-data", charset)
 
     N = len(dataset)
 

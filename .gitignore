@@ -1,4 +1,4 @@
-data/
+collected-data/
 node_modules/
 venv/
 .venv/

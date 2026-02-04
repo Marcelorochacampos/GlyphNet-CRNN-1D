@@ -2,7 +2,7 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 
-const OUTPUT_DIR = "./data";
+const OUTPUT_DIR = "./collected-data";
 const VIEWPORT = { width: 1280, height: 800 };
 const MAX_PAGES = 300;
 const urlQueue = [];
