@@ -6,7 +6,6 @@ class CRNNNetwork(nn.Module):
     def __init__(
         self,
         num_classes: int,
-        img_height: int = 32,
         cnn_out_channels: int = 512,
         rnn_hidden_size: int = 256,
         rnn_num_layers: int = 2
@@ -14,21 +13,21 @@ class CRNNNetwork(nn.Module):
         super().__init__()
 
         self.cnn = nn.Sequential(
-            # [B, 1, 32, W]
+            # [B, 1, 64, W]
             nn.Conv2d(1, 64, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),  # [B, 64, 16, W/2]
+            nn.MaxPool2d(2, 2),  # [B, 64, 32, W/2]
 
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),  # [B, 128, 8, W/4]
+            nn.MaxPool2d(2, 2),  # [B, 128, 16, W/4]
 
             nn.Conv2d(128, 256, kernel_size=3, padding=1),
             nn.ReLU(),
 
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d((2, 1)),  # [B, 256, 4, W/4]
+            nn.MaxPool2d((2, 1)),  # [B, 256, 8, W/4]
 
             nn.Conv2d(256, 512, kernel_size=3, padding=1),
             nn.BatchNorm2d(512),
@@ -37,10 +36,9 @@ class CRNNNetwork(nn.Module):
             nn.Conv2d(512, 512, kernel_size=3, padding=1),
             nn.BatchNorm2d(512),
             nn.ReLU(),
-            nn.MaxPool2d((2, 1)),  # [B, 512, 2, W/4]
+            nn.MaxPool2d((2, 1)),  # [B, 512, 4, W/4]
 
-            nn.Conv2d(512, cnn_out_channels, kernel_size=2),
-            nn.ReLU()  # [B, 512, 1, W']
+            nn.AdaptiveAvgPool2d((1, None))
         )
 
         self.rnn = nn.LSTM(

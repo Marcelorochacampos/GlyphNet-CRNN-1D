@@ -46,7 +46,6 @@ def run_inference(
     # Load model
     model = CRNNNetwork(
         num_classes=len(charset),
-        img_height=32,
         cnn_out_channels=512,
         rnn_hidden_size=256,
         rnn_num_layers=2

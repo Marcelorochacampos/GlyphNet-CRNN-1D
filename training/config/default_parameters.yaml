@@ -1,0 +1,59 @@
+experiment:
+  name: crnn_ocr_default
+  output_dir: ./experiments
+  save_best_only: true
+  metric: val_loss
+  maximize: false
+
+data:
+  img_height: 64
+  img_max_width: 512
+  batch_size: 32
+  num_workers: 4
+
+optimizer:
+  type: adam
+  lr: 0.001
+  weight_decay: 0.0001
+
+training:
+  epochs: 15
+  early_stopping:
+    enabled: true
+    patience: 3
+
+model:
+  cnn:
+    out_channels: 512
+
+  rnn:
+    hidden_size: 256
+    num_layers: 2
+    bidirectional: true
+
+augmentation:
+  enable: true
+
+  color_jitter:
+    brightness: 0.2
+    contrast: 0.2
+    probability: 0.5
+
+  gaussian_blur:
+    kernel_size: 3
+    probability: 0.2
+
+  affine:
+    degrees: 2
+    translate: 0.02
+    scale: [0.95, 1.05]
+    probability: 0.3
+
+ctc:
+  blank_token: "<blank>"
+  zero_infinity: true
+
+logging:
+  log_interval: 50
+  log_images: true
+  log_predictions: true

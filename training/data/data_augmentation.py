@@ -24,30 +24,30 @@ class ResizeKeepAspectRatio:
         return img
 
 
-def data_augmentation_pipeline():
+def data_augmentation_pipeline(configuration):
     return transforms.Compose([
         transforms.Grayscale(num_output_channels=1),
 
         transforms.RandomApply([
             transforms.ColorJitter(
-                brightness=0.3,
-                contrast=0.3
+                brightness=configuration["color_jitter"]["brightness"],
+                contrast=configuration["color_jitter"]["contrast"]
             )
-        ], p=0.5),
+        ], p=configuration["color_jitter"]["probability"]),
 
         transforms.RandomApply([
-            transforms.GaussianBlur(kernel_size=3)
-        ], p=0.2),
+            transforms.GaussianBlur(kernel_size=configuration["gaussian_blur"]["kernel_size"])
+        ], p=configuration["gaussian_blur"]["probability"]),
 
         transforms.RandomApply([
             transforms.RandomAffine(
-                degrees=2,
-                translate=(0.02, 0.02),
-                scale=(0.95, 1.05)
+                degrees=configuration["affine"]["degrees"],
+                translate=(configuration["affine"]["translate"], configuration["affine"]["translate"]),
+                scale=(configuration["affine"]["scale"][0], configuration["affine"]["scale"][1])
             )
-        ], p=0.3),
+        ], p=configuration["affine"]["probability"]),
 
-        ResizeKeepAspectRatio(height=32, max_width=256),
+        ResizeKeepAspectRatio(height=64, max_width=512),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
@@ -56,7 +56,7 @@ def data_augmentation_pipeline():
 def base_pipeline():
     return transforms.Compose([
         transforms.Grayscale(num_output_channels=1),
-        ResizeKeepAspectRatio(height=32, max_width=256),
+        ResizeKeepAspectRatio(height=64, max_width=512),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
