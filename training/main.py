@@ -15,7 +15,7 @@ from utils.update_model_progress import update_model_progress
 def main():
     charset_path = "./config/charset.json"
     dataset_path = "../data-collection/collected-data"
-    checkpoint_path = "./checkpoint"
+    checkpoint_path = "./checkpoint/model"
 
     print("\n" + "=" * 80)
     print("[INFO] Starting OCR Training Pipeline")
@@ -68,13 +68,12 @@ def main():
         test_transforms = base_pipeline()
         val_transforms = base_pipeline()
 
-        print("[INFO] Creating dataset subsets")
         train_ds = OCRDataset(dataset_path, charset, transform=train_transforms, index=train_idx)
         test_ds = OCRDataset(dataset_path, charset, transform=test_transforms, index=test_idx)
         val_ds = OCRDataset(dataset_path, charset, transform=val_transforms, index=val_idx)
-        
-        print("[INFO] Initializing DataLoaders")
+
         BATCH_SIZE = configuration["data"]["batch_size"]
+
         train_dataloader = DataLoader(
             train_ds,
             batch_size=BATCH_SIZE,
@@ -111,20 +110,20 @@ def main():
 
         blank_idx = charset[configuration["ctc"]["blank_token"]]
         criterion = torch.nn.CTCLoss(blank=blank_idx, zero_infinity=configuration["ctc"]["zero_infinity"])
-        optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=configuration["optimizer"]["weight_decay"])
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=LR,
+            weight_decay=configuration["optimizer"]["weight_decay"]
+        )
 
-        print("[INFO] Training configuration:")
-        print(f"       Epochs: {EPOCHS}")
-        print(f"       Batch size: {BATCH_SIZE}")
-        print(f"       Learning rate: {LR}")
-
+        best_val_loss = float("inf")
+        best_model_path = None
 
         print("\n" + "=" * 80)
         print("[TRAIN] Starting training loop")
         print("=" * 80)
 
-        for epoch in range(1, configuration["training"]["epochs"] + 1):
-    
+        for epoch in range(1, EPOCHS + 1):
             model.train()
             train_loss = 0.0
 
@@ -172,7 +171,7 @@ def main():
             train_loss /= len(train_dataloader)
             print(f"[TRAIN] Epoch {epoch} completed | Avg Loss: {train_loss:.4f}")
 
-            # Validation
+            # ---------- Validation ----------
             model.eval()
             val_loss = 0.0
 
@@ -203,25 +202,43 @@ def main():
                     val_loss += loss.item()
 
             val_loss /= len(val_dataloader)
-            print(f"[VAL] Epoch {epoch} | Avg Loss: {val_loss:.4f}")
 
-        model_name = "{id}_ocr.pt".format(id=model_configuration["id"])
-        
-        os.makedirs(checkpoint_path, exist_ok=True)
-        model_path = os.path.join(checkpoint_path, model_name)
-        torch.save(model.state_dict(), model_path)
-        print(f"[INFO] Checkpoint saved: {model_path}")
+            print(
+                f"[EPOCH {epoch}/{EPOCHS}] "
+                f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}"
+            )
 
-        print(f"[INFO] Updating model progress")
-        update_model_progress(checkpoint_path, model_configuration["id"], val_loss, model_path)
+            # ---------- Save best model ----------
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
 
-        print("\n" + "=" * 80)
-        print("[TEST] Running final evaluation")
-        print("=" * 80)
+                os.makedirs(checkpoint_path, exist_ok=True)
+                best_model_path = os.path.join(
+                    checkpoint_path,
+                    f"{model_configuration['id']}_best.pt"
+                )
 
+                torch.save(model.state_dict(), best_model_path)
+
+                print(
+                    f"[INFO] New best model saved "
+                    f"(val_loss={best_val_loss:.4f})"
+                )
+
+        # ---------- Update progress ----------
+        print("[INFO] Updating model progress")
+        update_model_progress(
+            checkpoint_path,
+            model_configuration["id"],
+            best_val_loss,
+            best_model_path
+        )
+
+        # ---------- Final Test ----------
+        model.load_state_dict(torch.load(best_model_path))
         model.eval()
-        test_loss = 0.0
 
+        test_loss = 0.0
         with torch.no_grad():
             for images, labels, target_lengths in test_dataloader:
                 images = images.to(device)
@@ -251,9 +268,9 @@ def main():
         test_loss /= len(test_dataloader)
         print(f"[TEST] Final Test Loss: {test_loss:.4f}")
 
-        print("\n" + "=" * 80)
-        print("[INFO] Training pipeline finished successfully")
-        print("=" * 80 + "\n")
+    print("\n" + "=" * 80)
+    print("[INFO] Training pipeline finished successfully")
+    print("=" * 80 + "\n")
 
 
 if __name__ == "__main__":

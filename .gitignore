@@ -1,7 +1,29 @@
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# MLflow
+mlruns/
+mlflow.db
+
+# Checkpoints, modelos e data
 collected-data/
 checkpoint/
-node_modules/
-venv/
-.venv/
-__pycache__
+checkpoints/
+*.pt
+*.pth
+
+# Logs
+logs/
+*.log
+
+# OS
 .DS_Store
+Thumbs.db
