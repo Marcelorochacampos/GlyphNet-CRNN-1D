@@ -1,3 +1,4 @@
+import yaml
 from PIL import Image
 import matplotlib.pyplot as plt
 from data.data_augmentation import data_augmentation_pipeline, base_pipeline
@@ -7,11 +8,14 @@ def show(image, title):
     plt.title(title)
     plt.axis("off")
 
-image_path = "./experiment/samples/image_03.png"
+image_path = "./experiment/samples/image_01.png"
 image = Image.open(image_path).convert("L")
 
+with open("./config/default_parameters.yaml", "r") as f:
+    configuration = yaml.safe_load(f)
+
 base = base_pipeline()
-aug = data_augmentation_pipeline()
+aug = data_augmentation_pipeline(configuration["augmentation"])
 
 base_img = base(image)
 aug_img = aug(image)
