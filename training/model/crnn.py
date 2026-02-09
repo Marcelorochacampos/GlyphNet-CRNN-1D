@@ -81,5 +81,3 @@ class CRNNNetwork(nn.Module):
         # x: [W', B, num_classes]
 
         return x
-
-

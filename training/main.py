@@ -1,275 +1,227 @@
 import os
-import torch
 import json
-import yaml
+import torch
 import mlflow
 import mlflow.pytorch
-from torch.utils.data import DataLoader
+
+from torch.utils.data import DataLoader, ConcatDataset, Subset
+from jiwer import cer, wer
+
 from data.dataset import OCRDataset
 from data.data_augmentation import data_augmentation_pipeline, base_pipeline
-
-from utils.generate_model_parameters import generate_model_parameters
 from model.crnn import CRNNNetwork
 from utils.collate_fn import collate_fn
 from utils.update_model_progress import update_model_progress
 
 
+# =========================================================
+# Utils
+# =========================================================
+
+def load_model_config(checkpoint_path, target_id="model_0014"):
+    with open(checkpoint_path, "r") as f:
+        data = json.load(f)
+
+    for model in data["models"]:
+        if model["id"] == target_id:
+            return model
+
+    raise ValueError(f"Model {target_id} not found")
+
+
+def save_training_checkpoint(path, epoch, model, optimizer, best_val_loss, epochs_no_improve):
+    torch.save({
+        "epoch": epoch,
+        "model_state": model.state_dict(),
+        "optimizer_state": optimizer.state_dict(),
+        "best_val_loss": best_val_loss,
+        "epochs_no_improve": epochs_no_improve
+    }, path)
+
+
+def load_training_checkpoint(path, model, optimizer):
+    ckpt = torch.load(path)
+    model.load_state_dict(ckpt["model_state"])
+    optimizer.load_state_dict(ckpt["optimizer_state"])
+    return ckpt["epoch"], ckpt["best_val_loss"], ckpt["epochs_no_improve"]
+
+
+def decode_predictions(logits, charset, blank_idx):
+    preds = logits.argmax(2).permute(1, 0)
+    texts = []
+
+    for pred in preds:
+        prev = None
+        chars = []
+        for idx in pred:
+            idx = idx.item()
+            if idx != blank_idx and idx != prev:
+                chars.append(charset[idx])
+            prev = idx
+        texts.append("".join(chars))
+    return texts
+
+
+# =========================================================
+# Main
+# =========================================================
+
 def main():
     charset_path = "./config/charset.json"
-    dataset_path = "../data-collection/collected-data"
-    model_checkpoint_path = "./checkpoint/model"
-    checkpoint_path = "./checkpoint"
+    dataset_paths = [
+        "../data-collection/collected-data-wikipedia",
+        "../data-collection/collected-data-wikisource",
+        "../data-collection/collected-data-synthetic"
+    ]
 
-    print("\n" + "=" * 80)
-    print("[INFO] Starting OCR Training Pipeline")
-    print("=" * 80)
+    model_progress_checkpoint = "./checkpoint/model_progress_checkpoint.json"
+    model_checkpoint_dir = "./checkpoint/model"
+    training_resume_path = "./checkpoint/training_resume.pt"
 
-    print(f"[INFO] Generating model parameters")
-    checkpoint_progress = generate_model_parameters()
-    
-    remaining_models = []
-    for remaining_model in checkpoint_progress["models"]:
-        if remaining_model["trained"] is False:
-            remaining_models.append(remaining_model)
+    os.makedirs(model_checkpoint_dir, exist_ok=True)
 
-    if len(remaining_models) <= 0:
-        print(f"[INFO] No remaining models to train")
-        return
-
-    print(f"[INFO] Loading charset from: {charset_path}")
+    # ---------------- Charset ----------------
     with open(charset_path, "r") as f:
         charset = json.load(f)
 
-    print(f"[INFO] Charset size: {len(charset)} tokens")
-    print(f"[INFO] Loading dataset from: {dataset_path}")
-    dataset = OCRDataset(dataset_path, charset)
-    N = len(dataset)
-    print(f"[INFO] Total samples found: {N}")
+    num_classes = len(charset)
+
+    # ---------------- Model config ----------------
+    model_info = load_model_config(model_progress_checkpoint, "model_0014")
+    configuration = model_info["parameters"]
+
+    # ---------------- Dataset ----------------
+    base_datasets = [OCRDataset(p, charset) for p in dataset_paths]
+    full_dataset = ConcatDataset(base_datasets)
+    N = len(full_dataset)
 
     generator = torch.Generator().manual_seed(42)
-    indexes = torch.randperm(N, generator=generator).tolist()
+    idx = torch.randperm(N, generator=generator).tolist()
 
     train_size = int(N * 0.8)
-    test_size = int(N * 0.1)
-    val_size = int(N - train_size - test_size)
-    print(
-        f"[INFO] Dataset split -> "
-        f"Train: {train_size} | Val: {val_size} | Test: {test_size}"
+    val_size = int(N * 0.1)
+
+    train_idx = idx[:train_size]
+    val_idx = idx[train_size:train_size + val_size]
+    test_idx = idx[train_size + val_size:]
+
+    train_ds = Subset(
+        ConcatDataset([
+            OCRDataset(p, charset, transform=data_augmentation_pipeline(configuration["augmentation"]))
+            for p in dataset_paths
+        ]),
+        train_idx
     )
-    train_idx = indexes[:train_size]
-    val_idx = indexes[train_size:train_size + val_size]
-    test_idx = indexes[train_size + val_size:]
 
+    val_ds = Subset(
+        ConcatDataset([
+            OCRDataset(p, charset, transform=base_pipeline())
+            for p in dataset_paths
+        ]),
+        val_idx
+    )
+
+    test_ds = Subset(
+        ConcatDataset([
+            OCRDataset(p, charset, transform=base_pipeline())
+            for p in dataset_paths
+        ]),
+        test_idx
+    )
+
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=configuration["data"]["batch_size"],
+        shuffle=True,
+        collate_fn=collate_fn
+    )
+
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=configuration["data"]["batch_size"],
+        shuffle=False,
+        collate_fn=collate_fn
+    )
+
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=configuration["data"]["batch_size"],
+        shuffle=False,
+        collate_fn=collate_fn
+    )
+
+    # ---------------- Model ----------------
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"[INFO] Using device: {device}")
 
+    model = CRNNNetwork(
+        num_classes=num_classes,
+        cnn_out_channels=configuration["model"]["cnn"]["out_channels"],
+        rnn_hidden_size=configuration["model"]["rnn"]["hidden_size"],
+        rnn_num_layers=configuration["model"]["rnn"]["num_layers"]
+    ).to(device)
+
+    blank_idx = charset[configuration["ctc"]["blank_token"]]
+    criterion = torch.nn.CTCLoss(blank=blank_idx, zero_infinity=True)
+
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=configuration["optimizer"]["lr"],
+        weight_decay=configuration["optimizer"]["weight_decay"]
+    )
+
+    # ---------------- Resume ----------------
+    start_epoch = 1
+    best_val_loss = float("inf")
+    epochs_no_improve = 0
+
+    if os.path.exists(training_resume_path):
+        start_epoch, best_val_loss, epochs_no_improve = load_training_checkpoint(
+            training_resume_path, model, optimizer
+        )
+
+    # ---------------- MLflow ----------------
     mlflow.set_experiment("crnn_ocr_gridsearch")
-    for model_configuration in remaining_models:
+    mlflow.start_run(run_name="model_0014_final")
 
-        with mlflow.start_run(run_name=f"model_{model_configuration['id']}"):
+    mlflow.log_params(configuration)
+    mlflow.set_tag("phase", "final_training")
+    mlflow.set_tag("base_model_id", "model_0014")
+    mlflow.set_tag("dataset_sources", "wikipedia+wikisource+synthetic")
+    mlflow.set_tag("resume_supported", True)
 
-            configuration = model_configuration["parameters"]
-            mlflow.log_params(configuration)
+    try:
+        # ---------------- Training ----------------
+        for epoch in range(start_epoch, configuration["training"]["epochs"] + 1):
+            model.train()
+            train_loss = 0.0
 
-            print("[INFO] Initializing data pipelines")
-            train_transforms = data_augmentation_pipeline(configuration["augmentation"])
-            test_transforms = base_pipeline()
-            val_transforms = base_pipeline()
+            for images, labels, target_lengths in train_loader:
+                images = images.to(device)
+                labels = labels.to(device)
+                target_lengths = target_lengths.to(device)
 
-            train_ds = OCRDataset(dataset_path, charset, transform=train_transforms, index=train_idx)
-            test_ds = OCRDataset(dataset_path, charset, transform=test_transforms, index=test_idx)
-            val_ds = OCRDataset(dataset_path, charset, transform=val_transforms, index=val_idx)
+                optimizer.zero_grad()
+                logits = model(images)
+                log_probs = logits.log_softmax(2)
 
-            BATCH_SIZE = configuration["data"]["batch_size"]
+                T, B, _ = log_probs.shape
+                input_lengths = torch.full((B,), T, device=device, dtype=torch.long)
 
-            train_dataloader = DataLoader(
-                train_ds,
-                batch_size=BATCH_SIZE,
-                shuffle=True,
-                num_workers=4,
-                pin_memory=True,
-                collate_fn=collate_fn
-            )
+                loss = criterion(log_probs, labels, input_lengths, target_lengths)
+                loss.backward()
+                optimizer.step()
 
-            val_dataloader = DataLoader(
-                val_ds,
-                batch_size=BATCH_SIZE,
-                shuffle=False,
-                collate_fn=collate_fn
-            )
+                train_loss += loss.item()
 
-            test_dataloader = DataLoader(
-                test_ds,
-                batch_size=BATCH_SIZE,
-                shuffle=False,
-                collate_fn=collate_fn
-            )
+            train_loss /= len(train_loader)
 
-            print("[INFO] Initializing model with parameters: {parameters}".format(parameters=configuration["model"]))
-            model = CRNNNetwork(
-                num_classes=len(charset),
-                cnn_out_channels=configuration["model"]["cnn"]["out_channels"],
-                rnn_hidden_size=configuration["model"]["rnn"]["hidden_size"],
-                rnn_num_layers=configuration["model"]["rnn"]["num_layers"]
-            ).to(device)
-
-            EPOCHS = configuration["training"]["epochs"]
-            LR = configuration["optimizer"]["lr"]
-            patience = configuration["training"]["early_stopping"]["patience"]
-            early_stopping_enabled = configuration["training"]["early_stopping"]["enabled"]
-
-            epochs_without_improvement = 0
-
-            blank_idx = charset[configuration["ctc"]["blank_token"]]
-            criterion = torch.nn.CTCLoss(blank=blank_idx, zero_infinity=configuration["ctc"]["zero_infinity"])
-            optimizer = torch.optim.Adam(
-                model.parameters(),
-                lr=LR,
-                weight_decay=configuration["optimizer"]["weight_decay"]
-            )
-
-            best_val_loss = float("inf")
-            best_model_path = None
-
-            print("\n" + "=" * 80)
-            print("[TRAIN] Starting training loop")
-            print("=" * 80)
-
-            for epoch in range(1, EPOCHS + 1):
-                model.train()
-                train_loss = 0.0
-
-                print(f"\n[TRAIN] Epoch {epoch}/{EPOCHS}")
-
-                for batch_idx, (images, labels, target_lengths) in enumerate(train_dataloader, start=1):
-                    images = images.to(device)
-                    labels = labels.to(device)
-                    target_lengths = target_lengths.to(device)
-
-                    optimizer.zero_grad()
-
-                    logits = model(images)
-                    log_probs = logits.log_softmax(2)
-
-                    T, B, _ = log_probs.shape
-                    input_lengths = torch.full(
-                        size=(B,),
-                        fill_value=T,
-                        dtype=torch.long,
-                        device=device
-                    )
-
-                    loss = criterion(
-                        log_probs,
-                        labels,
-                        input_lengths,
-                        target_lengths
-                    )
-
-                    loss.backward()
-                    optimizer.step()
-
-                    train_loss += loss.item()
-
-                    if batch_idx % 50 == 0 or batch_idx == len(train_dataloader):
-                        avg_loss = train_loss / batch_idx
-                        progress = (batch_idx / len(train_dataloader)) * 100
-                        print(
-                            f"[TRAIN] Batch {batch_idx:5d}/{len(train_dataloader)} "
-                            f"({progress:6.2f}%) | "
-                            f"Avg Loss: {avg_loss:.4f}"
-                        )
-
-                train_loss /= len(train_dataloader)
-                print(f"[TRAIN] Epoch {epoch} completed | Avg Loss: {train_loss:.4f}")
-
-                # ---------- Validation ----------
-                model.eval()
-                val_loss = 0.0
-
-                with torch.no_grad():
-                    for images, labels, target_lengths in val_dataloader:
-                        images = images.to(device)
-                        labels = labels.to(device)
-                        target_lengths = target_lengths.to(device)
-
-                        logits = model(images)
-                        log_probs = logits.log_softmax(2)
-
-                        T, B, _ = log_probs.shape
-                        input_lengths = torch.full(
-                            size=(B,),
-                            fill_value=T,
-                            dtype=torch.long,
-                            device=device
-                        )
-
-                        loss = criterion(
-                            log_probs,
-                            labels,
-                            input_lengths,
-                            target_lengths
-                        )
-
-                        val_loss += loss.item()
-
-                val_loss /= len(val_dataloader)
-
-                print(
-                    f"[EPOCH {epoch}/{EPOCHS}] "
-                    f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}"
-                )
-
-                mlflow.log_metric("train_loss", train_loss, step=epoch)
-                mlflow.log_metric("val_loss", val_loss, step=epoch)
-
-                # ---------- Save best model ----------
-                if val_loss < best_val_loss:
-                    best_val_loss = val_loss
-
-                    os.makedirs(model_checkpoint_path, exist_ok=True)
-                    best_model_path = os.path.join(
-                        model_checkpoint_path,
-                        f"{model_configuration['id']}_best.pt"
-                    )
-
-                    torch.save(model.state_dict(), best_model_path)
-
-                    print(
-                        f"[INFO] New best model saved "
-                        f"(val_loss={best_val_loss:.4f})"
-                    )
-                else:
-                    epochs_without_improvement += 1
-                    print(
-                        f"[INFO] No improvement "
-                        f"({epochs_without_improvement}/{patience})"
-                    )
-
-                if early_stopping_enabled and epochs_without_improvement >= patience:
-                    print(
-                        f"[EARLY STOPPING] "
-                        f"Stopped at epoch {epoch} "
-                        f"(best_val_loss={best_val_loss:.4f})"
-                    )
-                    break
-
-            # ---------- Update progress ----------
-            print("[INFO] Updating model progress")
-            update_model_progress(
-                f"{checkpoint_path}/model_progress_checkpoint.json",
-                model_configuration["id"],
-                best_val_loss,
-                best_model_path
-            )
-
-            # ---------- Final Test ----------
-            model.load_state_dict(torch.load(best_model_path))
+            # ---------------- Validation + CER/WER ----------------
             model.eval()
+            val_loss = 0.0
+            all_preds, all_gt = [], []
 
-            test_loss = 0.0
             with torch.no_grad():
-                for images, labels, target_lengths in test_dataloader:
+                for images, labels, target_lengths, texts in val_loader:
                     images = images.to(device)
                     labels = labels.to(device)
                     target_lengths = target_lengths.to(device)
@@ -278,32 +230,78 @@ def main():
                     log_probs = logits.log_softmax(2)
 
                     T, B, _ = log_probs.shape
-                    input_lengths = torch.full(
-                        size=(B,),
-                        fill_value=T,
-                        dtype=torch.long,
-                        device=device
-                    )
+                    input_lengths = torch.full((B,), T, device=device, dtype=torch.long)
 
-                    loss = criterion(
-                        log_probs,
-                        labels,
-                        input_lengths,
-                        target_lengths
-                    )
+                    loss = criterion(log_probs, labels, input_lengths, target_lengths)
+                    val_loss += loss.item()
 
-                    test_loss += loss.item()
+                    preds = decode_predictions(logits, charset, blank_idx)
+                    all_preds.extend(preds)
+                    all_gt.extend(texts)
 
-            test_loss /= len(test_dataloader)
-            print(f"[TEST] Final Test Loss: {test_loss:.4f}")
-            mlflow.log_metric("test_loss", test_loss)
-            mlflow.log_artifact(best_model_path)
+            val_loss /= len(val_loader)
+            cer_score = cer(all_gt, all_preds)
+            wer_score = wer(all_gt, all_preds)
 
-            
+            mlflow.log_metric("train_loss", train_loss, step=epoch)
+            mlflow.log_metric("val_loss", val_loss, step=epoch)
+            mlflow.log_metric("val_cer", cer_score, step=epoch)
+            mlflow.log_metric("val_wer", wer_score, step=epoch)
 
-    print("\n" + "=" * 80)
-    print("[INFO] Training pipeline finished successfully")
-    print("=" * 80 + "\n")
+            print(
+                f"[EPOCH {epoch}] "
+                f"Train={train_loss:.4f} | Val={val_loss:.4f} "
+                f"CER={cer_score:.4f} WER={wer_score:.4f}"
+            )
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                epochs_no_improve = 0
+                torch.save(
+                    model.state_dict(),
+                    os.path.join(model_checkpoint_dir, "model_0014_best.pt")
+                )
+            else:
+                epochs_no_improve += 1
+
+            save_training_checkpoint(
+                training_resume_path,
+                epoch + 1,
+                model,
+                optimizer,
+                best_val_loss,
+                epochs_no_improve
+            )
+
+            if epochs_no_improve >= configuration["training"]["early_stopping"]["patience"]:
+                print("[EARLY STOPPING]")
+                break
+
+        mlflow.end_run(status="FINISHED")
+
+    except KeyboardInterrupt:
+        print("\n[INFO] Training interrupted by user (Ctrl+C)")
+        print("[INFO] Checkpoint saved, closing MLflow run as KILLED")
+
+        mlflow.set_tag("interrupted", True)
+        mlflow.set_tag("interrupt_epoch", epoch)
+
+        mlflow.end_run(status="KILLED")
+        return
+
+    except Exception as e:
+        mlflow.end_run(status="FAILED")
+        raise e
+
+    # ---------------- Update progress ----------------
+    update_model_progress(
+        model_progress_checkpoint,
+        "model_0014",
+        best_val_loss,
+        os.path.join(model_checkpoint_dir, "model_0014_best.pt")
+    )
+
+    print("[INFO] Training completed successfully")
 
 
 if __name__ == "__main__":

@@ -14,9 +14,10 @@ mlruns/
 mlflow.db
 
 # Checkpoints, modelos e data
-collected-data/
+collected-data*/
 checkpoint/
 checkpoints/
+fonts/
 *.pt
 *.pth
 

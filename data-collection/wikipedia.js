@@ -2,7 +2,7 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 
-const OUTPUT_DIR = "./collected-data";
+const OUTPUT_DIR = "./collected-data-wikipedia";
 const VIEWPORT = { width: 1280, height: 800 };
 const MAX_PAGES = 300;
 const urlQueue = [];
@@ -300,15 +300,92 @@ const TARGET_URLS = [
   // "https://pt.wikipedia.org/wiki/David_Hume",
   // "https://pt.wikipedia.org/wiki/Baruch_Spinoza",
   // "https://pt.wikipedia.org/wiki/Georg_Wilhelm_Friedrich_Hegel",
+
+  // "https://pt.wikipedia.org/wiki/Idade_do_Bronze",
+  // "https://pt.wikipedia.org/wiki/Idade_do_Ferro",
+  // "https://pt.wikipedia.org/wiki/Cruzadas",
+  // "https://pt.wikipedia.org/wiki/Imp%C3%A9rio_Mongol",
+  // "https://pt.wikipedia.org/wiki/Gengis_Can",
+  // "https://pt.wikipedia.org/wiki/Imp%C3%A9rio_Persa",
+  // "https://pt.wikipedia.org/wiki/Imp%C3%A9rio_Astro-H%C3%BAngaro",
+  // "https://pt.wikipedia.org/wiki/Imp%C3%A9rio_Espanhol",
+  // "https://pt.wikipedia.org/wiki/Imp%C3%A9rio_Brit%C3%A2nico",
+  // "https://pt.wikipedia.org/wiki/Coloniza%C3%A7%C3%A3o_das_Am%C3%A9ricas",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_%C3%81frica",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_%C3%81sia",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_China",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_do_Jap%C3%A3o",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_%C3%8Dndia",
+  // "https://pt.wikipedia.org/wiki/M%C3%A9todo_experimental",
+  // "https://pt.wikipedia.org/wiki/Filosofia_da_ci%C3%AAncia",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_f%C3%ADsica",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_qu%C3%ADmica",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_biologia",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_computa%C3%A7%C3%A3o",
+  // "https://pt.wikipedia.org/wiki/Teoria_da_evolu%C3%A7%C3%A3o",
+  // "https://pt.wikipedia.org/wiki/Genoma_humano",
+  // "https://pt.wikipedia.org/wiki/Neur%C3%B4nio",
+  // "https://pt.wikipedia.org/wiki/C%C3%A9lula",
+  // "https://pt.wikipedia.org/wiki/Eletricidade",
+  // "https://pt.wikipedia.org/wiki/Magnetismo",
+  // "https://pt.wikipedia.org/wiki/Termodin%C3%A2mica",
+  // "https://pt.wikipedia.org/wiki/Relatividade_geral",
+  // "https://pt.wikipedia.org/wiki/Mec%C3%A2nica_cl%C3%A1ssica",
+  // "https://pt.wikipedia.org/wiki/Geografia_f%C3%ADsica",
+  // "https://pt.wikipedia.org/wiki/Geografia_humana",
+  // "https://pt.wikipedia.org/wiki/Planeta",
+  // "https://pt.wikipedia.org/wiki/Atmosfera",
+  // "https://pt.wikipedia.org/wiki/Hidrosfera",
+  // "https://pt.wikipedia.org/wiki/Litosfera",
+  // "https://pt.wikipedia.org/wiki/Tect%C3%B4nica_de_placas",
+  // "https://pt.wikipedia.org/wiki/Cadeia_montanhosa",
+  // "https://pt.wikipedia.org/wiki/Plan%C3%ADcie",
+  // "https://pt.wikipedia.org/wiki/Ilha",
+  // "https://pt.wikipedia.org/wiki/Oceano_Pac%C3%ADfico",
+  // "https://pt.wikipedia.org/wiki/Oceano_Atl%C3%A2ntico",
+  // "https://pt.wikipedia.org/wiki/Amaz%C3%B4nia_Legal",
+  // "https://pt.wikipedia.org/wiki/Pantanal",
+  // "https://pt.wikipedia.org/wiki/Ant%C3%A1rtida",
+  // "https://pt.wikipedia.org/wiki/Louis_Pasteur",
+  // "https://pt.wikipedia.org/wiki/Gregor_Mendel",
+  // "https://pt.wikipedia.org/wiki/Antoine_Lavoisier",
+  // "https://pt.wikipedia.org/wiki/James_Clerk_Maxwell",
+  // "https://pt.wikipedia.org/wiki/Enrico_Fermi",
+  // "https://pt.wikipedia.org/wiki/Erwin_Schr%C3%B6dinger",
+  // "https://pt.wikipedia.org/wiki/Niels_Bohr",
+  // "https://pt.wikipedia.org/wiki/Robert_Oppenheimer",
+  // "https://pt.wikipedia.org/wiki/Tim_Berners-Lee",
+  // "https://pt.wikipedia.org/wiki/Grace_Hopper",
+  // "https://pt.wikipedia.org/wiki/Dennis_Ritchie",
+  // "https://pt.wikipedia.org/wiki/Ken_Thompson",
+  // "https://pt.wikipedia.org/wiki/Noam_Chomsky",
+  // "https://pt.wikipedia.org/wiki/Sigmund_Freud",
+  // "https://pt.wikipedia.org/wiki/Carl_Jung",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_linguagem",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_escrita",
+  // "https://pt.wikipedia.org/wiki/Alfabeto_fon%C3%A9tico",
+  // "https://pt.wikipedia.org/wiki/L%C3%ADnguas_indo-europeias",
+  // "https://pt.wikipedia.org/wiki/L%C3%ADnguas_sem%C3%ADticas",
+  // "https://pt.wikipedia.org/wiki/Literatura_universal",
+  // "https://pt.wikipedia.org/wiki/Hist%C3%B3ria_da_literatura",
+  // "https://pt.wikipedia.org/wiki/Teatro",
+  // "https://pt.wikipedia.org/wiki/Cinema",
+  // "https://pt.wikipedia.org/wiki/Fotografia",
+  // "https://pt.wikipedia.org/wiki/Jornalismo",
+  // "https://pt.wikipedia.org/wiki/Comunica%C3%A7%C3%A3o",
+  // "https://pt.wikipedia.org/wiki/Mass_media",
+  // "https://pt.wikipedia.org/wiki/Cultura_popular",
+  // "https://pt.wikipedia.org/wiki/Cultura_erudita",
+
 ];
 
 TARGET_URLS.forEach(url => urlQueue.push(url));
 
-const visitedUrlsJsonData = fs.readFileSync('./visited_urls.json', 'utf8');
+const visitedUrlsJsonData = fs.readFileSync('./visited_urls_wikipedia.json', 'utf8');
 const allVisitedUrls = JSON.parse(visitedUrlsJsonData);
 const visitedUrls = new Set(allVisitedUrls.visited || []);
 
-let SAMPLE_ID = 47155;
+let SAMPLE_ID = 63743;
 let CURRENT_AMOUNT_OF_VISITED_URLS = 0
 
 function nextSampleId() {
