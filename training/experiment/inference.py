@@ -74,7 +74,7 @@ def run_inference(
 
 # ---------- Run ----------
 if __name__ == "__main__":
-    image_path = "./experiment/samples/image_04.png"
+    image_path = "./experiment/samples/image.png"
     checkpoint_path = "./checkpoint/model/model_0014_best.pt"
     charset_path = "./config/charset.json"
 
