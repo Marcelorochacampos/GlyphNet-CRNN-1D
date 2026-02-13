@@ -4,7 +4,7 @@ from torchvision import transforms
 from PIL import Image
 
 class ResizeKeepAspectRatio:
-    def __init__(self, height=32, max_width=256):
+    def __init__(self, height=64, max_width=1024):
         self.height = height
         self.max_width = max_width
 
@@ -47,7 +47,7 @@ def data_augmentation_pipeline(configuration):
             )
         ], p=configuration["affine"]["probability"]),
 
-        ResizeKeepAspectRatio(height=64, max_width=512),
+        ResizeKeepAspectRatio(height=64, max_width=1024),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
@@ -56,7 +56,7 @@ def data_augmentation_pipeline(configuration):
 def base_pipeline():
     return transforms.Compose([
         transforms.Grayscale(num_output_channels=1),
-        ResizeKeepAspectRatio(height=64, max_width=512),
+        ResizeKeepAspectRatio(height=64, max_width=1024),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
