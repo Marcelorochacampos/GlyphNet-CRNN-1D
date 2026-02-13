@@ -12,7 +12,7 @@ The goal was to design, train, and evaluate a custom end-to-end OCR system using
 - Integrate experiment tracking (MLflow)
 - Analyze architectural limitations and model bottlenecks
 
-## 🎯 Architecture Overview
+## 🧠 Architecture Overview
 The model follows a CRNN-style architecture:
 
 ### Image
