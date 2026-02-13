@@ -127,6 +127,9 @@ Where the model performs well:
 - High contrast images
 - Long horizontal sequences
 
+*Original*  
+![Single Line Example](doc/single_line_example.png)  
+*Output*  
 ![Good Example](doc/single_line_output.png)
 
 Where the model struggles:
@@ -136,6 +139,9 @@ Where the model struggles:
 - Multi-line layout
 - Reduced vertical detail
 
+*Original*  
+![Multi Line Example](doc/multi_line_example.png)  
+*Output*  
 ![Multi line and accent issue](doc/multi_line_output.png)
 
 
